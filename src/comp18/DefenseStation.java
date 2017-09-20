@@ -106,7 +106,7 @@ public class DefenseStation {
             if (proc_num<states.size()){
             	State s = states.get(proc_num);
             	if(s.timedOut()){
-                	String error = "Process#"+proc_num+" timed out.\n";
+                	String error = "The process#"+proc_num+" timed out.\n";
                 	messageArea.append(error);
                 	out.print(error);
             	} else {
