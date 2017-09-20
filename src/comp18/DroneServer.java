@@ -115,7 +115,7 @@ public class DroneServer {
 
                     switch(codigoMensagem){
                     case "DEC":
-                    	//Procura se o drone já está no banco de dados comparando
+                    	//Procura se o drone jï¿½ estï¿½ no banco de dados comparando
                     	//Seu posicionamento
                     	boolean droneNoBD = false;
                     	posicoes = dados.split(":");
@@ -131,7 +131,7 @@ public class DroneServer {
                     	if(droneNoBD){
                     		out.println(plot + ":" + "IGN");                    	}
                     	else{
-                    		state = new ProcessState(k++, System.currentTimeMillis());
+                    		state = new ProcessState(k++, System.currentTimeMillis(),dados);
                     		processos.put(plot, state);
                     		out.println(plot + ":" + "INF");
                     		state.goAhead();

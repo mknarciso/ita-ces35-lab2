@@ -35,15 +35,16 @@ public class DefenseStation {
         frame.getContentPane().add(textField, "North");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
         frame.pack();
-        my_cod = getName();
+        //my_cod = getName();
         // Add Listeners
         textField.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-            	String resp = my_cod+":"+String.format("%03d", i)+":DEC:"+textField.getText();
+            	String pos = textField.getText();
+            	String resp = String.format("%03d", i)+":DEC:"+pos;
                 out.println(resp);
                 textField.setText("");
                 messageArea.append("=>"+resp + "\n");
-                states.add(new ProcessState(i,System.currentTimeMillis()));
+                states.add(new ProcessState(i,System.currentTimeMillis(),pos));
             	i++;
             }
         });
@@ -63,13 +64,13 @@ public class DefenseStation {
     /**
      * Prompt for and return the desired screen name.
      */
-    private String getName() {
+    /*private String getName() {
         return JOptionPane.showInputDialog(
             frame,
             "Selecione um Id de 2 char para esta estação remota:",
             "Remote DefenseSystem",
             JOptionPane.PLAIN_MESSAGE);
-    }
+    }*/
     private String getInfo(int process){
         return JOptionPane.showInputDialog(
                 frame,
@@ -90,7 +91,7 @@ public class DefenseStation {
     private void run() throws IOException {
     	
         // Make connection and initialize streams
-        String serverAddress = "127.0.0.1";//getServerAddress();
+        String serverAddress = "192.168.0.28";//getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
@@ -100,19 +101,20 @@ public class DefenseStation {
             textField.setEditable(true);
             String line = in.readLine();
             messageArea.append("<="+line + "\n");
-            String dest = line.substring(0,2);
-            int proc_num = Integer.parseInt(line.substring(3,6));
-            String stage = line.substring(7,10);
+            int proc_num = Integer.parseInt(line.substring(0,3));
+            String stage = line.substring(4,7);
             if (proc_num<states.size()){
             	ProcessState s = states.get(proc_num);
             	if(s.timedOut()){
-                	String error = "Process#"+proc_num+" timed out.\n";
+                	String error = "The process#"+proc_num+" timed out.\n";
                 	messageArea.append(error);
                 	out.print(error);
             	} else {
                     if (stage.equals("INF")) {
                     	if(s.isAtStage(0)){
-                    		out.println(my_cod+":"+String.format("%03d", i)+":SIN:"+ getInfo(proc_num));
+                    		String resp = String.format("%03d", proc_num)+":SIN:"+ s.getPos()+":"+getInfo(proc_num);
+                    		out.println(resp);
+                            messageArea.append("=>"+resp + "\n");
                     		s.goAhead();
                     	} else {
                         	String error = "Message out of sequence.\n";
@@ -120,9 +122,36 @@ public class DefenseStation {
                         	out.print(error);
                     	}
                     }
-                    if (stage.equals("RES")) {
+                    if (stage.equals("IGN")) {
+                    	if(s.isAtStage(0)){
+                    		String resp = String.format("%03d", proc_num)+":DONE";
+                    		out.println(resp);
+                            messageArea.append("=>"+resp + "\n");
+                    		s.goAhead();
+                    	} else {
+                        	String error = "Message out of sequence.\n";
+                        	messageArea.append(error);
+                        	out.print(error);
+                    	}
+                    }
+                    if (stage.equals("ACT")) {
                     	if(s.isAtStage(1)){
-                    		out.println(my_cod+":"+String.format("%03d", i)+":RES:"+ getResult(proc_num,line.substring(11,14)));
+                    		String resp = String.format("%03d", proc_num)+":RES:"+line.substring(8)+
+                    				":"+ getResult(proc_num,line.substring(8));
+                    		out.println(resp);
+                            messageArea.append("=>"+resp + "\n");
+                            s.goAhead();
+                    	} else {
+                        	String error = "Message out of sequence.\n";
+                        	messageArea.append(error);
+                        	out.print(error);
+                    	}
+                    }   
+                    if (stage.equals("ACK")) {
+                    	if(s.isAtStage(2)){
+                    		String resp = String.format("%03d", proc_num)+":DONE";
+                    		out.println(resp);
+                            messageArea.append("=>"+resp + "\n");
                     		s.goAhead();
                     	} else {
                         	String error = "Message out of sequence.\n";

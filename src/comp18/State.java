@@ -1,18 +1,19 @@
 package comp18;
 
-public class ProcessState {
+public class State {
 	long last_interaction;
 	int step;
 	int cod;
-	int label;
 	String pos;
-	public ProcessState(int cod,long start_time, String posicao){
+	public State(int cod,long start_time, String pos){
 		this.cod = cod;
 		last_interaction = start_time;
 		step=0;
-		pos = posicao;
+		this.pos = pos;
 	}
-	
+	public String getPos(){
+		return pos;
+	} 
 	public boolean timedOut(){
 		if ((System.currentTimeMillis()-last_interaction)>15000){
 			return true;
@@ -25,10 +26,5 @@ public class ProcessState {
 	public void goAhead(){
 		last_interaction=System.currentTimeMillis();
 		step++;
-	}
-
-	public String getPos() {
-		// TODO Auto-generated method stub
-		return pos;
 	}
 }
