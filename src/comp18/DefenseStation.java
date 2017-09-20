@@ -39,11 +39,12 @@ public class DefenseStation {
         // Add Listeners
         textField.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-            	String resp = String.format("%03d", i)+":DEC:"+textField.getText();
+            	String pos = textField.getText();
+            	String resp = String.format("%03d", i)+":DEC:"+pos;
                 out.println(resp);
                 textField.setText("");
                 messageArea.append("=>"+resp + "\n");
-                states.add(new State(i,System.currentTimeMillis()));
+                states.add(new State(i,System.currentTimeMillis(),pos));
             	i++;
             }
         });
@@ -90,7 +91,7 @@ public class DefenseStation {
     private void run() throws IOException {
     	
         // Make connection and initialize streams
-        String serverAddress = "127.0.0.1";//getServerAddress();
+        String serverAddress = "192.168.0.28";//getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
@@ -111,7 +112,19 @@ public class DefenseStation {
             	} else {
                     if (stage.equals("INF")) {
                     	if(s.isAtStage(0)){
-                    		String resp = String.format("%03d", proc_num)+":SIN:"+ getInfo(proc_num);
+                    		String resp = String.format("%03d", proc_num)+":SIN:"+ s.getPos()+":"+getInfo(proc_num);
+                    		out.println(resp);
+                            messageArea.append("=>"+resp + "\n");
+                    		s.goAhead();
+                    	} else {
+                        	String error = "Message out of sequence.\n";
+                        	messageArea.append(error);
+                        	out.print(error);
+                    	}
+                    }
+                    if (stage.equals("IGN")) {
+                    	if(s.isAtStage(0)){
+                    		String resp = String.format("%03d", proc_num)+":DONE";
                     		out.println(resp);
                             messageArea.append("=>"+resp + "\n");
                     		s.goAhead();
