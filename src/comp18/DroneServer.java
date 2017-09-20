@@ -8,7 +8,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 /**
  * A multithreaded chat room server.  When a client connects the
@@ -40,15 +39,14 @@ public class DroneServer {
      * The set of all names of clients in the chat room.  Maintained
      * so that we can check that new clients are not registering name
      * already in use.
-     */
+     */    
     private static ArrayList<Drone> bancoDeDados = new ArrayList<Drone>();
 
     /**
      * The set of all the print writers for all the clients.  This
      * set is kept so we can easily broadcast messages.
      */
-    private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-
+    
     /**
      * The appplication main method, which just listens on a port and
      * spawns handler threads.
@@ -71,11 +69,10 @@ public class DroneServer {
      * and broadcasting its messages.
      */
     private static class Handler extends Thread {
-        private String name;
         private Socket socket;
         private BufferedReader in;
         private PrintWriter out;
-        private HashMap<String, Processo> processos;
+        private HashMap<String, ProcessState> processos;
 
         /**
          * Constructs a handler thread, squirreling away the socket.
@@ -83,14 +80,7 @@ public class DroneServer {
          */
         public Handler(Socket socket) {
             this.socket = socket;
-        }
-        
-        public boolean timeout(Processo processo){
-        	//DEFINIR TAMANHO DO TIMEOUT
-        	long timeout = 1000;
-        	if(System.currentTimeMillis() - processo._ultimaInteracao > timeout)
-        		return true;
-        	return false;
+            processos = new HashMap<String, ProcessState>();
         }
 
         /**
@@ -106,7 +96,9 @@ public class DroneServer {
                 // Create character streams for the socket.
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
-
+                int k = 1;
+                ProcessState state;
+                
                 // Request a name from this client.  Keep requesting until
                 // a name is submitted that is not already used.  Note that
                 // checking for the existence of a name and adding the name
@@ -115,18 +107,20 @@ public class DroneServer {
                     String input = in.readLine();
                     //MENSAGEM DO TIPO -> AB:001:DEC:123:124:1001
                     System.out.println(input);
-                    String estacao = input.substring(0,2);
-                    String plot = input.substring(3,6);
-                    String codigoMensagem = input.substring(7, 10);
-                    String dados = input.substring(11);
+                    String plot = input.substring(0,3);
+                    String codigoMensagem = input.substring(4, 7);
+                    String dados = input.substring(8);
                     int posicao_X, posicao_Y, id;
+                	String[] posicoes;
+
                     switch(codigoMensagem){
                     case "DEC":
                     	//Procura se o drone já está no banco de dados comparando
                     	//Seu posicionamento
                     	boolean droneNoBD = false;
-                    	posicao_X = Integer.parseInt(dados.substring(0,3));
-                    	posicao_Y = Integer.parseInt(dados.substring(4,7));
+                    	posicoes = dados.split(":");
+                    	posicao_X = Integer.parseInt(posicoes[0]);
+                    	posicao_Y = Integer.parseInt(posicoes[1]);
                     	synchronized(bancoDeDados){
                         	for(int i = 0; i < bancoDeDados.size(); i++){
                         		if(bancoDeDados.get(i)._pos_x == posicao_X && bancoDeDados.get(i)._pos_y == posicao_Y)
@@ -135,90 +129,95 @@ public class DroneServer {
                     	}
   
                     	if(droneNoBD){
-                    		out.println(estacao + ":" + plot + ":" + "IGN");
-                            writers.add(out);
-                    	}
+                    		out.println(plot + ":" + "IGN");                    	}
                     	else{
-                    		processos.put(plot, new Processo("INF", System.currentTimeMillis()));
-                    		out.println(estacao + ":" + plot + ":" + "INF");
-                    		writers.add(out);
+                    		state = new ProcessState(k++, System.currentTimeMillis());
+                    		processos.put(plot, state);
+                    		out.println(plot + ":" + "INF");
+                    		state.goAhead();
                     	}
                     	break;
                     
                     case "SIN":
-                    	posicao_X = Integer.parseInt(dados.substring(0,3));
-                    	posicao_Y = Integer.parseInt(dados.substring(4,7));
-                    	id = Integer.parseInt(dados.substring(8,12));
-                    	if(!timeout(processos.get(plot))){
-                    		processos.get(plot)._status = "SIN";
-                        	processos.get(plot)._ultimaInteracao = System.currentTimeMillis();
-                        	synchronized(bancoDeDados){
-                        		bancoDeDados.add(new Drone(id, posicao_X, posicao_Y));
+                    	posicoes = dados.split(":");
+                    	posicao_X = Integer.parseInt(posicoes[0]);
+                    	posicao_Y = Integer.parseInt(posicoes[1]);
+                    	id = Integer.parseInt(posicoes[2]);
+                        state = processos.get(plot);
+                    	if(!state.timedOut()){
+                    		if(state.isAtStage(1)){
+                            	synchronized(bancoDeDados){
+                            		bancoDeDados.add(new Drone(id, posicao_X, posicao_Y));
+                            		state.label = id;
+                            	}
+                            	if(id % 2 == 0){ //Se código for par, então está autorizado
+                            		out.println(plot + ":ACT:WELCOME");
+                            	}
+                            	else{
+                            		out.println(plot + ":ACT:DESTROY");
+                            	}
+                    			state.goAhead();
                         	}
-                        	if(id % 2 == 0){ //Se código for par, então está autorizado
-                        		out.println(estacao + ":" + plot + ":RES:WELCOME");
-                        		writers.add(out);
-                        		processos.get(plot)._status = "OIE";
-                        	}
-                        	else{
-                        		out.println(estacao + ":" + plot + ":RES:DESTROY");
-                        		writers.add(out);
-                        		processos.get(plot)._status = "DES";
-                        	}
-                    		processos.get(plot)._ultimaInteracao = System.currentTimeMillis();
+                    		else{
+                    			String error = "Message out of sequence";
+                            	out.print(error);
+                    		}
                     	}
                     	else{
-                    		processos.remove(plot);
+                    		String error = "Process#"+state.cod+" timed out.\n";
+                        	out.print(error);
                     	}
                     	
                     	break;
                     	
-                    case "ACK":
+                    case "DONE":
+                        System.out.println("Transação terminada");
+
+                    	
+                    case "RES":
                     	//Considerando que só quem manda ACK é o DESTROY, retirar o drone do BD
                     	//Nos dados, só vem o id do drone
-                    	id = Integer.parseInt(dados);
-                    	if(!timeout(processos.get(plot))){
-                    		boolean achouDrone = false;
-                        	int indice = -1;
-                        	synchronized(bancoDeDados){
-                        		for(int i = 0; i < bancoDeDados.size() && !achouDrone; i++){
-                            		if(bancoDeDados.get(i)._id == id){
-                            			achouDrone = true;
-                            			indice = i;
-                            		}
-                            	}
-                        		if(achouDrone)
-                        			bancoDeDados.remove(indice);	
-                        	}
+                    	posicoes = dados.split(":");
+                        state = processos.get(plot);
+                        String acao = posicoes[0];
+                        String resultado = posicoes[1];
+                    	if(!state.timedOut()){
+                    		if(state.isAtStage(2)){
+                    			if(acao == "DESTROY" && resultado == "DONE"){
+                    				boolean achouDrone = false;
+                                	int indice = -1;
+                                	synchronized(bancoDeDados){
+                                		for(int i = 0; i < bancoDeDados.size() && !achouDrone; i++){
+                                    		if(bancoDeDados.get(i)._id == state.label){
+                                    			achouDrone = true;
+                                    			indice = i;
+                                    		}
+                                    	}
+                                		if(achouDrone)
+                                			bancoDeDados.remove(indice);	
+                                	}
+                            	}       				
+                            	out.println(plot + ":ACK");
+                            	state.goAhead();
+                    		}
+                    		else{
+                    			String error = "Message out of sequence";
+                            	out.print(error);
+                    		}
                     	}
-                    	processos.remove(plot); 	
+                    	else{
+                    		String error = "Process#"+state.cod+" timed out.\n";
+                        	out.print(error);
+                    	}
                     	break;
+                    	
+                    default:
+                        System.out.println("Comando não identificado");
                     }                          
                 }
-  
-
-                // Accept messages from this client and broadcast them.
-                // Ignore other clients that cannot be broadcasted to.
-                /*while (true) {
-                    String input = in.readLine();
-                    if (input == null) {
-                        return;
-                    }
-                    for (PrintWriter writer : writers) {
-                        writer.println("MESSAGE " + name + ": " + input);
-                    }
-                }*/
             } catch (IOException e) {
                 System.out.println(e);
             } finally {
-                // This client is going down!  Remove its name and its print
-                // writer from the sets, and close its socket.
-                /*if (name != null) {
-                    names.remove(name);
-                }*/
-                if (out != null) {
-                    writers.remove(out);
-                }
                 try {
                     socket.close();
                 } catch (IOException e) {
