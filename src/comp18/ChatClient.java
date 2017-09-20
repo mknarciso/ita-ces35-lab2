@@ -1,5 +1,6 @@
 package comp18;
 
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -34,7 +35,7 @@ public class ChatClient {
 
     BufferedReader in;
     PrintWriter out;
-    JFrame frame = new JFrame("Chatter");
+    JFrame frame = new JFrame("DefenseStation");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
 
@@ -75,8 +76,8 @@ public class ChatClient {
     private String getServerAddress() {
         return JOptionPane.showInputDialog(
             frame,
-            "Enter IP Address of the Server:",
-            "Welcome to the Chatter",
+            "Endereço da Centro de Controle (IP):",
+            "DroneDefense",
             JOptionPane.QUESTION_MESSAGE);
     }
 
@@ -86,32 +87,45 @@ public class ChatClient {
     private String getName() {
         return JOptionPane.showInputDialog(
             frame,
-            "Choose a screen name:",
-            "Screen name selection",
+            "Selecione um Id de 2 char para esta estação remota:",
+            "Remote DefenseSystem",
             JOptionPane.PLAIN_MESSAGE);
     }
-
+    private String getInfo(String process){
+        return JOptionPane.showInputDialog(
+                frame,
+                "Qual o código XPDR da aeronave #"+process+" ?",
+                "Remote DefenseSystem",
+                JOptionPane.PLAIN_MESSAGE);
+    }
     /**
      * Connects to the server then enters the processing loop.
      */
     private void run() throws IOException {
-
+    	String my_cod = getName();
         // Make connection and initialize streams
-        String serverAddress = getServerAddress();
+        String serverAddress = "127.0.0.1";//getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
-
         // Process all messages from server, according to the protocol.
         while (true) {
+            textField.setEditable(true);
             String line = in.readLine();
-            if (line.startsWith("SUBMITNAME")) {
-                out.println(getName());
-            } else if (line.startsWith("NAMEACCEPTED")) {
-                textField.setEditable(true);
+            String dest = line.substring(0,2);
+            String proc_num = line.substring(3,6);
+            String stage = line.substring(7,10);
+            messageArea.append(line + "\n");
+            if (stage.equals("INF")) {
+            	
+                out.println(getInfo(proc_num));
             } else if (line.startsWith("MESSAGE")) {
-                messageArea.append(line.substring(8) + "\n");
+            	String msg = line.substring(8);
+            	//String from = msg.substring(0,2);
+            	dest = msg.substring(4,6);
+            	if (dest.equals(my_cod))
+            		messageArea.append(msg.substring(11) + "\n");
             }
         }
     }
