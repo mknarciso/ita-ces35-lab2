@@ -122,7 +122,7 @@ public class DroneServer {
                     int posicao_X, posicao_Y, id;
                     switch(codigoMensagem){
                     case "DEC":
-                    	//Procura se o drone já está no banco de dados comparando
+                    	//Procura se o drone jï¿½ estï¿½ no banco de dados comparando
                     	//Seu posicionamento
                     	boolean droneNoBD = false;
                     	posicao_X = Integer.parseInt(dados.substring(0,3));
@@ -155,7 +155,7 @@ public class DroneServer {
                         	synchronized(bancoDeDados){
                         		bancoDeDados.add(new Drone(id, posicao_X, posicao_Y));
                         	}
-                        	if(id % 2 == 0){ //Se código for par, então está autorizado
+                        	if(id % 2 == 0){ //Se cï¿½digo for par, entï¿½o estï¿½ autorizado
                         		out.println(estacao + ":" + plot + ":RES:WELCOME");
                         		writers.add(out);
                         		processos.get(plot)._status = "OIE";
@@ -174,8 +174,8 @@ public class DroneServer {
                     	break;
                     	
                     case "ACK":
-                    	//Considerando que só quem manda ACK é o DESTROY, retirar o drone do BD
-                    	//Nos dados, só vem o id do drone
+                    	//Considerando que sï¿½ quem manda ACK ï¿½ o DESTROY, retirar o drone do BD
+                    	//Nos dados, sï¿½ vem o id do drone
                     	id = Integer.parseInt(dados);
                     	if(!timeout(processos.get(plot))){
                     		boolean achouDrone = false;
