@@ -20,7 +20,7 @@ public class DefenseStation {
 
     BufferedReader in;
     PrintWriter out;
-    ArrayList <State> states;
+    ArrayList <ProcessState> states;
     int i = 0;
     JFrame frame = new JFrame("DefenseStation");
     JTextField textField = new JTextField(40);
@@ -28,7 +28,7 @@ public class DefenseStation {
     String my_cod;
 
     public DefenseStation() {
-    	states = new ArrayList<State>();
+    	states = new ArrayList<ProcessState>();
         // Layout GUI
         textField.setEditable(false);
         messageArea.setEditable(false);
@@ -44,7 +44,7 @@ public class DefenseStation {
                 out.println(resp);
                 textField.setText("");
                 messageArea.append("=>"+resp + "\n");
-                states.add(new State(i,System.currentTimeMillis(),pos));
+                states.add(new ProcessState(i,System.currentTimeMillis(),pos));
             	i++;
             }
         });
@@ -56,7 +56,7 @@ public class DefenseStation {
     private String getServerAddress() {
         return JOptionPane.showInputDialog(
             frame,
-            "EndereÃ§o da Centro de Controle (IP):",
+            "Endereço da Centro de Controle (IP):",
             "DroneDefense",
             JOptionPane.QUESTION_MESSAGE);
     }
@@ -67,21 +67,21 @@ public class DefenseStation {
     /*private String getName() {
         return JOptionPane.showInputDialog(
             frame,
-            "Selecione um Id de 2 char para esta estaÃ§Ã£o remota:",
+            "Selecione um Id de 2 char para esta estação remota:",
             "Remote DefenseSystem",
             JOptionPane.PLAIN_MESSAGE);
     }*/
     private String getInfo(int process){
         return JOptionPane.showInputDialog(
                 frame,
-                "Qual o cÃ³digo XPDR da aeronave #"+process+" ?",
+                "Qual o código XPDR da aeronave #"+process+" ?",
                 "Remote DefenseSystem",
                 JOptionPane.PLAIN_MESSAGE);
     }
     private String getResult(int process,String action){
         return JOptionPane.showInputDialog(
                 frame,
-                "AÃ§Ã£o a ser executada para o plote #"+process+":\n"+action+"\nQual o Resultado?",
+                "Ação a ser executada para o plote #"+process+":\n"+action+"\nQual o Resultado?",
                 "Remote DefenseSystem",
                 JOptionPane.PLAIN_MESSAGE);
     }
@@ -104,7 +104,7 @@ public class DefenseStation {
             int proc_num = Integer.parseInt(line.substring(0,3));
             String stage = line.substring(4,7);
             if (proc_num<states.size()){
-            	State s = states.get(proc_num);
+            	ProcessState s = states.get(proc_num);
             	if(s.timedOut()){
                 	String error = "The process#"+proc_num+" timed out.\n";
                 	messageArea.append(error);
